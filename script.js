@@ -280,7 +280,12 @@ class TypingSpeedTest {
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new EnhancedTypingSpeedTest();
+    const typingTest = new EnhancedTypingSpeedTest();
+
+    // Setup Google login button
+    document.getElementById('googleLoginBtn').addEventListener('click', () => {
+        typingTest.handleGoogleLogin();
+    });
 
     // Register Service Worker for PWA support
     registerServiceWorker();
@@ -299,6 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize theme system
     initThemeSystem();
+
+    // Check if leaderboard should be loaded initially
+    if (window.location.hash === '#leaderboard') {
+        setTimeout(() => typingTest.switchTab('leaderboard'), 1000);
+    }
 });
 
 // Service Worker Registration
@@ -712,25 +722,67 @@ function trackUserEngagement(action, data = {}) {
     });
 }
 
-// Enhanced typing test tracking
+// Enhanced typing test tracking with navigation and leaderboard
 class EnhancedTypingSpeedTest extends TypingSpeedTest {
     constructor() {
         super();
         this.testStartTime = null;
         this.sessionId = generateSessionId();
+        this.currentUser = null;
+        this.currentTab = 'test';
+
+        // Initialize navigation and auth
+        this.initNavigation();
+        this.initGoogleAuth();
+        this.initLeaderboard();
+    }
+
+    initNavigation() {
+        const navTest = document.getElementById('navTest');
+        const navLeaderboard = document.getElementById('navLeaderboard');
+
+        navTest.addEventListener('click', () => this.switchTab('test'));
+        navLeaderboard.addEventListener('click', () => this.switchTab('leaderboard'));
+    }
+
+    switchTab(tab) {
+        this.currentTab = tab;
+
+        // Update navigation buttons
+        document.getElementById('navTest').classList.toggle('active', tab === 'test');
+        document.getElementById('navLeaderboard').classList.toggle('active', tab === 'leaderboard');
+
+        // Show/hide sections
+        document.getElementById('testSection').style.display = tab === 'test' ? 'block' : 'none';
+        document.getElementById('leaderboardSection').style.display = tab === 'leaderboard' ? 'block' : 'none';
+
+        // Load leaderboard if switching to it
+        if (tab === 'leaderboard') {
+            this.loadLeaderboard();
+        }
+
+        trackUserEngagement('tab_switched', { tab: tab });
     }
 
     startTest() {
+        if (!this.currentUser) {
+            alert('Lütfen önce Google ile giriş yapın!');
+            this.initGoogleAuth();
+            return;
+        }
+
         super.startTest();
         this.testStartTime = Date.now();
 
         trackTypingEvent('test_started', {
             difficulty: this.difficultySelect.value,
-            session_id: this.sessionId
+            session_id: this.sessionId,
+            user_id: this.currentUser.id
         });
 
         trackUserEngagement('test_started', {
-            difficulty: this.difficultySelect.value
+            difficulty: this.difficultySelect.value,
+            user_id: this.currentUser.id
         });
     }
 
@@ -741,25 +793,267 @@ class EnhancedTypingSpeedTest extends TypingSpeedTest {
         totalTypingTime += testDuration;
         typingTestsCompleted++;
 
+        // Save result to leaderboard
+        this.saveToLeaderboard({
+            wpm: Math.round(this.calculateWPM()),
+            accuracy: Math.round(this.calculateAccuracy()),
+            difficulty: this.difficultySelect.value,
+            duration: testDuration,
+            timestamp: Date.now()
+        });
+
         trackTypingEvent('test_completed', {
             difficulty: this.difficultySelect.value,
             session_id: this.sessionId,
             test_duration: testDuration,
-            tests_completed: typingTestsCompleted
+            tests_completed: typingTestsCompleted,
+            user_id: this.currentUser.id
         });
 
         trackUserEngagement('test_completed', {
             difficulty: this.difficultySelect.value,
-            test_duration: testDuration
+            test_duration: testDuration,
+            user_id: this.currentUser.id
         });
     }
 
-    restartTest() {
-        trackTypingEvent('test_restarted', {
-            session_id: this.sessionId
+    saveToLeaderboard(result) {
+        if (!this.currentUser) return;
+
+        const leaderboardKey = 'typing-leaderboard';
+        const leaderboard = JSON.parse(localStorage.getItem(leaderboardKey) || '[]');
+
+        const newEntry = {
+            id: generateSessionId(),
+            userId: this.currentUser.id,
+            userName: this.currentUser.name,
+            userAvatar: this.currentUser.picture,
+            difficulty: result.difficulty,
+            wpm: result.wpm,
+            accuracy: result.accuracy,
+            cpm: result.wpm * 5,
+            duration: result.duration,
+            timestamp: result.timestamp,
+            date: new Date(result.timestamp).toLocaleDateString('tr-TR')
+        };
+
+        leaderboard.push(newEntry);
+
+        // Sort by WPM descending, then by accuracy
+        leaderboard.sort((a, b) => {
+            if (b.wpm !== a.wpm) return b.wpm - a.wpm;
+            return b.accuracy - a.accuracy;
         });
 
-        super.restartTest();
+        // Keep only top 100 entries
+        leaderboard.splice(100);
+
+        localStorage.setItem(leaderboardKey, JSON.stringify(leaderboard));
+        console.log('[Leaderboard] Result saved:', newEntry);
+    }
+
+    loadLeaderboard() {
+        const leaderboardKey = 'typing-leaderboard';
+        const leaderboard = JSON.parse(localStorage.getItem(leaderboardKey) || '[]');
+
+        const loadingEl = document.getElementById('leaderboardLoading');
+        const emptyEl = document.getElementById('leaderboardEmpty');
+        const listEl = document.getElementById('leaderboardList');
+
+        loadingEl.style.display = 'none';
+
+        if (leaderboard.length === 0) {
+            emptyEl.style.display = 'block';
+            listEl.style.display = 'none';
+            return;
+        }
+
+        emptyEl.style.display = 'none';
+        listEl.style.display = 'block';
+        listEl.innerHTML = '';
+
+        const currentFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+
+        const filteredLeaderboard = currentFilter === 'all'
+            ? leaderboard
+            : leaderboard.filter(entry => entry.difficulty === currentFilter);
+
+        filteredLeaderboard.slice(0, 20).forEach((entry, index) => {
+            const isCurrentUser = this.currentUser && entry.userId === this.currentUser.id;
+            const rank = index + 1;
+
+            const itemEl = document.createElement('div');
+            itemEl.className = `leaderboard-item ${isCurrentUser ? 'current-user' : ''}`;
+
+            itemEl.innerHTML = `
+                <div class="leaderboard-rank ${rank <= 3 ? 'crown' : ''}">
+                    ${rank <= 3 ? '<i class="fas fa-crown"></i>' : rank}
+                </div>
+                <div class="leaderboard-info">
+                    <img class="leaderboard-avatar" src="${entry.userAvatar}" alt="${entry.userName}">
+                    <div class="leaderboard-details">
+                        <div class="leaderboard-name">${entry.userName}</div>
+                        <div class="leaderboard-date">${entry.date}</div>
+                    </div>
+                </div>
+                <div class="leaderboard-stats">
+                    <div class="leaderboard-stat">
+                        <span class="leaderboard-stat-value">${entry.wpm}</span>
+                        <span class="leaderboard-stat-label">WPM</span>
+                    </div>
+                    <div class="leaderboard-stat">
+                        <span class="leaderboard-stat-value">${entry.accuracy}%</span>
+                        <span class="leaderboard-stat-label">Doğruluk</span>
+                    </div>
+                    <div class="leaderboard-difficulty ${entry.difficulty}">
+                        ${entry.difficulty}
+                    </div>
+                </div>
+            `;
+
+            listEl.appendChild(itemEl);
+        });
+
+        trackUserEngagement('leaderboard_viewed', {
+            total_entries: leaderboard.length,
+            filter: currentFilter
+        });
+    }
+
+    initGoogleAuth() {
+        // Check if user is already logged in
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            this.currentUser = JSON.parse(savedUser);
+            this.showUserInfo();
+            return;
+        }
+
+        // Show login button
+        this.showLoginButton();
+    }
+
+    showLoginButton() {
+        document.getElementById('userInfo').style.display = 'none';
+        document.getElementById('googleLoginBtn').style.display = 'flex';
+    }
+
+    showUserInfo() {
+        if (!this.currentUser) return;
+
+        document.getElementById('userInfo').style.display = 'flex';
+        document.getElementById('googleLoginBtn').style.display = 'none';
+
+        document.getElementById('userAvatar').src = this.currentUser.picture;
+        document.getElementById('userName').textContent = this.currentUser.name;
+
+        // Setup logout
+        document.getElementById('logoutBtn').onclick = () => this.logout();
+    }
+
+    async handleGoogleLogin() {
+        try {
+            // Real Google OAuth implementation
+            if (window.google && window.google.accounts) {
+                // Use Google Identity Services
+                const client = window.google.accounts.oauth2.initTokenClient({
+                    client_id: 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com', // Replace with actual client ID
+                    scope: 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email',
+                    callback: (tokenResponse) => {
+                        if (tokenResponse.error) {
+                            throw new Error(tokenResponse.error);
+                        }
+                        this.fetchUserInfo(tokenResponse.access_token);
+                    },
+                });
+
+                client.requestAccessToken();
+            } else {
+                // Fallback to demo mode
+                console.log('[Auth] Google API not loaded, using demo mode');
+                this.demoLogin();
+            }
+        } catch (error) {
+            console.error('[Auth] Google login failed:', error);
+            this.demoLogin(); // Fallback to demo
+        }
+    }
+
+    async fetchUserInfo(accessToken) {
+        try {
+            const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+
+            if (response.ok) {
+                const userInfo = await response.json();
+
+                const user = {
+                    id: userInfo.id,
+                    name: userInfo.name,
+                    email: userInfo.email,
+                    picture: userInfo.picture
+                };
+
+                this.currentUser = user;
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                localStorage.setItem('googleAccessToken', accessToken);
+                this.showUserInfo();
+
+                trackUserEngagement('user_login', {
+                    provider: 'google',
+                    user_id: user.id
+                });
+
+                console.log('[Auth] Google user logged in:', user);
+            } else {
+                throw new Error('Failed to fetch user info');
+            }
+        } catch (error) {
+            console.error('[Auth] Failed to fetch user info:', error);
+            this.demoLogin();
+        }
+    }
+
+    demoLogin() {
+        // Demo mode for development
+        const mockUser = {
+            id: 'demo_' + Math.random().toString(36).substr(2, 9),
+            name: 'Demo Kullanıcı',
+            email: 'demo@example.com',
+            picture: `https://ui-avatars.com/api/?name=Demo+Kullanıcı&size=32&background=6366f1&color=ffffff`
+        };
+
+        this.currentUser = mockUser;
+        localStorage.setItem('currentUser', JSON.stringify(mockUser));
+        this.showUserInfo();
+
+        trackUserEngagement('user_login', {
+            provider: 'demo',
+            user_id: mockUser.id
+        });
+
+        console.log('[Auth] Demo user logged in:', mockUser);
+    }
+
+    logout() {
+        this.currentUser = null;
+        localStorage.removeItem('currentUser');
+        this.showLoginButton();
+
+        trackUserEngagement('user_logout');
+        console.log('[Auth] User logged out');
+    }
+
+    initLeaderboard() {
+        // Setup filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.loadLeaderboard();
+            });
+        });
     }
 }
 

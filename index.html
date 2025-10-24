@@ -43,6 +43,9 @@
     <link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#6366f1">
     <link rel="manifest" href="manifest.json">
 
+    <!-- Google Auth Script -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,6 +54,7 @@
     <!-- DNS prefetch -->
     <link rel="dns-prefetch" href="https://fonts.googleapis.com">
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://accounts.google.com">
 
     <!-- Stylesheets -->
     <link rel="stylesheet" href="styles.css">
@@ -67,6 +71,31 @@
                 <i class="fas fa-keyboard"></i>
                 <h1>Hızlı Yazı</h1>
             </div>
+
+            <nav class="navigation">
+                <button class="nav-btn active" id="navTest">
+                    <i class="fas fa-keyboard"></i>
+                    Test
+                </button>
+                <button class="nav-btn" id="navLeaderboard">
+                    <i class="fas fa-trophy"></i>
+                    Lider Tablosu
+                </button>
+                <div class="user-section">
+                    <div class="user-info" id="userInfo" style="display: none;">
+                        <img class="user-avatar" id="userAvatar" src="" alt="User">
+                        <span class="user-name" id="userName">Kullanıcı</span>
+                        <button class="btn-logout" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                    <button class="btn-google-login" id="googleLoginBtn">
+                        <i class="fab fa-google"></i>
+                        Google ile Giriş
+                    </button>
+                </div>
+            </nav>
+
             <div class="stats">
                 <div class="stat">
                     <span class="stat-label">WPM</span>
@@ -84,68 +113,103 @@
         </header>
 
         <main class="main-content">
-            <div class="text-display" id="textDisplay">
-                <div class="text-content" id="textContent">
-                    Yazma hızınızı test etmek için bu metni yazmaya başlayın. Klavyenizi kullanarak metni doğru bir şekilde kopyalayın.
-                </div>
-                <div class="text-input-container">
-                    <textarea 
-                        class="text-input" 
-                        id="textInput" 
-                        placeholder="Buraya yazmaya başlayın..."
-                        disabled
-                    ></textarea>
-                </div>
-            </div>
-
-            <div class="controls">
-                <button class="btn btn-primary" id="startBtn">
-                    <i class="fas fa-play"></i>
-                    Testi Başlat
-                </button>
-                <button class="btn btn-secondary" id="restartBtn" disabled>
-                    <i class="fas fa-redo"></i>
-                    Yeniden Başlat
-                </button>
-                <div class="difficulty-selector">
-                    <label for="difficulty">Zorluk:</label>
-                    <select id="difficulty" class="difficulty-select">
-                        <option value="easy">Kolay</option>
-                        <option value="medium" selected>Orta</option>
-                        <option value="hard">Zor</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="results" id="results" style="display: none;">
-                <div class="results-card">
-                    <h3>Sonuçlarınız</h3>
-                    <div class="results-grid">
-                        <div class="result-item">
-                            <div class="result-value" id="finalWpm">0</div>
-                            <div class="result-label">WPM</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-value" id="finalAccuracy">0%</div>
-                            <div class="result-label">Doğruluk</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-value" id="finalCpm">0</div>
-                            <div class="result-label">CPM</div>
-                        </div>
-                        <div class="result-item">
-                            <div class="result-value" id="totalChars">0</div>
-                            <div class="result-label">Karakter</div>
-                        </div>
+            <!-- Typing Test Section -->
+            <section class="tab-content active" id="testSection">
+                <div class="text-display" id="textDisplay">
+                    <div class="text-content" id="textContent">
+                        Yazma hızınızı test etmek için bu metni yazmaya başlayın. Klavyenizi kullanarak metni doğru bir şekilde kopyalayın.
                     </div>
-                    <div class="performance-indicator">
-                        <div class="performance-text" id="performanceText">Harika!</div>
-                        <div class="performance-bar">
-                            <div class="performance-fill" id="performanceFill"></div>
-                        </div>
+                    <div class="text-input-container">
+                        <textarea
+                            class="text-input"
+                            id="textInput"
+                            placeholder="Buraya yazmaya başlayın..."
+                            disabled
+                        ></textarea>
                     </div>
                 </div>
-            </div>
+
+                <div class="controls">
+                    <button class="btn btn-primary" id="startBtn">
+                        <i class="fas fa-play"></i>
+                        Testi Başlat
+                    </button>
+                    <button class="btn btn-secondary" id="restartBtn" disabled>
+                        <i class="fas fa-redo"></i>
+                        Yeniden Başlat
+                    </button>
+                    <div class="difficulty-selector">
+                        <label for="difficulty">Zorluk:</label>
+                        <select id="difficulty" class="difficulty-select">
+                            <option value="easy">Kolay</option>
+                            <option value="medium" selected>Orta</option>
+                            <option value="hard">Zor</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="results" id="results" style="display: none;">
+                    <div class="results-card">
+                        <h3>Sonuçlarınız</h3>
+                        <div class="results-grid">
+                            <div class="result-item">
+                                <div class="result-value" id="finalWpm">0</div>
+                                <div class="result-label">WPM</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-value" id="finalAccuracy">0%</div>
+                                <div class="result-label">Doğruluk</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-value" id="finalCpm">0</div>
+                                <div class="result-label">CPM</div>
+                            </div>
+                            <div class="result-item">
+                                <div class="result-value" id="totalChars">0</div>
+                                <div class="result-label">Karakter</div>
+                            </div>
+                        </div>
+                        <div class="performance-indicator">
+                            <div class="performance-text" id="performanceText">Harika!</div>
+                            <div class="performance-bar">
+                                <div class="performance-fill" id="performanceFill"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Leaderboard Section -->
+            <section class="tab-content" id="leaderboardSection" style="display: none;">
+                <div class="leaderboard-container">
+                    <div class="leaderboard-header">
+                        <h2><i class="fas fa-trophy"></i> Lider Tablosu</h2>
+                        <div class="leaderboard-filters">
+                            <button class="filter-btn active" data-filter="all">Tümü</button>
+                            <button class="filter-btn" data-filter="easy">Kolay</button>
+                            <button class="filter-btn" data-filter="medium">Orta</button>
+                            <button class="filter-btn" data-filter="hard">Zor</button>
+                        </div>
+                    </div>
+
+                    <div class="leaderboard-content">
+                        <div class="leaderboard-loading" id="leaderboardLoading">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            Yükleniyor...
+                        </div>
+
+                        <div class="leaderboard-empty" id="leaderboardEmpty" style="display: none;">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>Henüz skor yok</h3>
+                            <p>İlk testinizi tamamlayarak lider tablosuna katılın!</p>
+                        </div>
+
+                        <div class="leaderboard-list" id="leaderboardList" style="display: none;">
+                            <!-- Leaderboard items will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <footer class="footer">

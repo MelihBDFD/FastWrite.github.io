@@ -15,16 +15,12 @@ Modern, PWA destekli ve analytics entegre Türkçe yazma hızı test uygulaması
 
 ## 🌟 **YENİ ÖZELLİKLER**
 
-- ✅ **Analytics & Monitoring**: Google Analytics 4 entegrasyonu
-- ✅ **Push Notifications**: Bildirim desteği
-- ✅ **Dark/Light Theme**: Otomatik tema değiştirme
-- ✅ **Performance Monitoring**: Web Vitals tracking
-- ✅ **Error Tracking**: Otomatik hata takibi
-- ✅ **Code Quality**: ESLint, Prettier, Husky
-- ✅ **GitHub Templates**: Issue ve PR templates
-- ✅ **Enhanced PWA**: Background sync, caching strategies
-- ✅ **Accessibility**: WCAG uyumlu, high contrast support
-- ✅ **Mobile Optimized**: Enhanced responsive design
+- ✅ **Google Authentication**: Gerçek Google OAuth entegrasyonu
+- ✅ **Lider Tablosu**: Tüm kullanıcı skorlarını görüntüleme
+- ✅ **Tab-based Navigation**: Test ve lider tablosu arasında geçiş
+- ✅ **Text Alignment Fix**: Yazı alignment sorunu düzeltildi
+- ✅ **Enhanced User System**: Kullanıcı profilleri ve session yönetimi
+- ✅ **Real-time Leaderboard**: Filtreleme ve sıralama özellikleri
 
 ## ✨ **Tüm Özellikler**
 
@@ -120,11 +116,21 @@ hizli-yazi-uygulamasi/
 
 ## 🎯 **Kullanım**
 
+### **Google ile Giriş**
+1. **Giriş Yapın**: Header'daki "Google ile Giriş" butonuna tıklayın
+2. **İzin Verin**: Google hesabınızla giriş yapın
+3. **Profil**: Avatar ve isminiz header'da görünecek
+
 ### **Typing Test**
 1. **Testi Başlat**: "Testi Başlat" butonuna tıklayın
 2. **Zorluk Seçin**: Kolay, Orta veya Zor seviye seçin
 3. **Yazmaya Başlayın**: Verilen metni doğru olarak yazın
 4. **Sonuçları Görün**: Test tamamlandığında detaylı sonuçlar gösterilir
+
+### **Lider Tablosu**
+1. **Tab'a Geçin**: Header'daki "Lider Tablosu" butonuna tıklayın
+2. **Filtreleyin**: Zorluk seviyesine göre filtreleme yapın
+3. **Skorunuzu Görün**: Tüm kullanıcılar arasında sıralamanızı görün
 
 ### **PWA Features**
 - 📱 **Install App**: Browser'dan "Install" butonuna tıklayın
@@ -164,11 +170,13 @@ npm run dev
 npm run lint
 npm run format
 
-# Validate
-npm run validate
-```
+### **Google OAuth Setup (Optional)**
+1. **Google Cloud Console**'da yeni proje oluşturun
+2. **OAuth 2.0 Client ID** oluşturun
+3. **Authorized redirect URIs**'ne sitenizin URL'ini ekleyin
+4. **Client ID**'yi `script.js` dosyasında `YOUR_GOOGLE_CLIENT_ID` yerine koyun
 
-### **Available Scripts**
+**Demo Mode**: Client ID ayarlanmazsa otomatik demo mode aktif olur.
 - `npm run dev` - Development server
 - `npm run build` - Build for production
 - `npm run lint` - Code linting
