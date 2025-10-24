@@ -280,13 +280,25 @@ class TypingSpeedTest {
 
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new TypingSpeedTest();
+    new EnhancedTypingSpeedTest();
 
     // Register Service Worker for PWA support
     registerServiceWorker();
 
     // Check for app updates
     checkForUpdates();
+
+    // Initialize analytics
+    initAnalytics();
+
+    // Initialize push notifications
+    initPushNotifications();
+
+    // Initialize performance monitoring
+    initPerformanceMonitoring();
+
+    // Initialize theme system
+    initThemeSystem();
 });
 
 // Service Worker Registration
@@ -418,15 +430,438 @@ function showInstallButton() {
     document.body.appendChild(installBtn);
 }
 
+// Analytics initialization
+function initAnalytics() {
+    // Check if analytics should be loaded (respect privacy)
+    if (localStorage.getItem('analytics-consent') === 'true' || !localStorage.getItem('analytics-consent')) {
+        loadGoogleAnalytics();
+        trackPageView();
+    }
+
+    // Listen for analytics consent changes
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'analytics-consent') {
+            if (e.newValue === 'true') {
+                loadGoogleAnalytics();
+            } else {
+                disableAnalytics();
+            }
+        }
+    });
+}
+
+// Google Analytics 4 setup
+function loadGoogleAnalytics() {
+    // Load Google Analytics script
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX'; // Replace with actual GA4 ID
+    document.head.appendChild(script);
+
+    // Initialize gtag
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX', {
+        app_name: 'Hızlı Yazı',
+        app_version: '1.1.0',
+        send_page_view: false
+    });
+
+    window.gtag = gtag;
+    console.log('[Analytics] Google Analytics loaded');
+}
+
+// Track page views
+function trackPageView() {
+    if (window.gtag) {
+        gtag('event', 'page_view', {
+            page_title: document.title,
+            page_location: window.location.href
+        });
+    }
+}
+
+// Track typing test events
+function trackTypingEvent(eventName, data) {
+    if (window.gtag) {
+        gtag('event', eventName, {
+            event_category: 'typing_test',
+            event_label: data.difficulty || 'unknown',
+            value: data.wpm || 0,
+            custom_parameters: data
+        });
+    }
+
+    // Also cache for offline sync
+    cacheAnalyticsEvent(eventName, data);
+}
+
+// Cache analytics events for offline sync
+async function cacheAnalyticsEvent(eventName, data) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+            type: 'UPDATE_ANALYTICS',
+            payload: {
+                event: eventName,
+                data: data,
+                timestamp: Date.now(),
+                url: window.location.href
+            }
+        });
+    }
+}
+
+// Disable analytics
+function disableAnalytics() {
+    window.gtag = null;
+    window.dataLayer = [];
+    localStorage.removeItem('ga-session');
+    console.log('[Analytics] Analytics disabled');
+}
+
+// Push notifications initialization
+async function initPushNotifications() {
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+        const permission = await Notification.requestPermission();
+
+        if (permission === 'granted') {
+            console.log('[Notifications] Permission granted');
+            subscribeToPushNotifications();
+        } else {
+            console.log('[Notifications] Permission denied');
+        }
+    }
+}
+
+// Subscribe to push notifications
+async function subscribeToPushNotifications() {
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(
+                'BKxQzBRl4oWJ6uE1mVzRm7nO2dP3h4k5L6M8N9P0Q1R2S3T4U5V6W7X8Y9Z0A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0'
+            )
+        });
+
+        console.log('[Notifications] Subscribed to push notifications:', subscription);
+
+        // Send subscription to server (implement server-side handling)
+        await sendSubscriptionToServer(subscription);
+
+        // Track subscription event
+        trackTypingEvent('push_notification_subscribed', {
+            endpoint: subscription.endpoint
+        });
+
+    } catch (error) {
+        console.error('[Notifications] Push subscription failed:', error);
+    }
+}
+
+// Convert VAPID key
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Send subscription to server
+async function sendSubscriptionToServer(subscription) {
+    try {
+        // This would be implemented on your server
+        const response = await fetch('/api/push-subscription', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(subscription)
+        });
+
+        if (response.ok) {
+            console.log('[Notifications] Subscription sent to server');
+        }
+    } catch (error) {
+        console.error('[Notifications] Failed to send subscription:', error);
+        // Cache for later sync
+        cacheAnalyticsEvent('push_subscription_failed', { error: error.message });
+    }
+}
+
 // Performance monitoring
-if ('performance' in window) {
+function initPerformanceMonitoring() {
+    // Web Vitals monitoring
+    if ('PerformanceObserver' in window) {
+        // Largest Contentful Paint (LCP)
+        new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                trackPerformanceMetric('LCP', entry.startTime);
+            }
+        }).observe({ entryTypes: ['largest-contentful-paint'] });
+
+        // First Input Delay (FID)
+        new PerformanceObserver((list) => {
+            for (const entry of list.getEntries()) {
+                trackPerformanceMetric('FID', entry.processingStart - entry.startTime);
+            }
+        }).observe({ entryTypes: ['first-input'] });
+
+        // Cumulative Layout Shift (CLS)
+        new PerformanceObserver((list) => {
+            let clsValue = 0;
+            for (const entry of list.getEntries()) {
+                if (!entry.hadRecentInput) {
+                    clsValue += entry.value;
+                }
+            }
+            if (clsValue > 0) {
+                trackPerformanceMetric('CLS', clsValue);
+            }
+        }).observe({ entryTypes: ['layout-shift'] });
+    }
+
+    // Track page load performance
     window.addEventListener('load', () => {
         setTimeout(() => {
             const perfData = performance.getEntriesByType('navigation')[0];
-            console.log('[Performance] Page load time:', perfData.loadEventEnd - perfData.loadEventStart, 'ms');
-            console.log('[Performance] DOM ready time:', perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart, 'ms');
+            if (perfData) {
+                trackPerformanceMetric('page_load_time', perfData.loadEventEnd - perfData.loadEventStart);
+                trackPerformanceMetric('dom_ready_time', perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart);
+            }
         }, 0);
     });
+}
+
+// Track performance metrics
+function trackPerformanceMetric(metricName, value) {
+    if (window.gtag) {
+        gtag('event', 'web_vitals', {
+            event_category: 'performance',
+            event_label: metricName,
+            value: Math.round(value)
+        });
+    }
+
+    console.log(`[Performance] ${metricName}: ${value}ms`);
+
+    // Cache for offline sync
+    cacheAnalyticsEvent('performance_metric', {
+        metric: metricName,
+        value: value,
+        timestamp: Date.now()
+    });
+}
+
+// Error tracking
+window.addEventListener('error', (event) => {
+    trackError('javascript_error', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error?.stack
+    });
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    trackError('unhandled_promise_rejection', {
+        reason: event.reason?.toString(),
+        promise: event.promise?.toString()
+    });
+});
+
+// Track errors
+function trackError(errorType, data) {
+    console.error(`[Error Tracking] ${errorType}:`, data);
+
+    if (window.gtag) {
+        gtag('event', 'exception', {
+            description: `${errorType}: ${data.message || data.reason}`,
+            fatal: false
+        });
+    }
+
+    cacheAnalyticsEvent('error', {
+        type: errorType,
+        data: data,
+        timestamp: Date.now()
+    });
+}
+
+// User engagement tracking
+let sessionStartTime = Date.now();
+let typingTestsCompleted = 0;
+let totalTypingTime = 0;
+
+function trackUserEngagement(action, data = {}) {
+    const sessionDuration = Date.now() - sessionStartTime;
+
+    trackTypingEvent('user_engagement', {
+        action: action,
+        session_duration: sessionDuration,
+        tests_completed: typingTestsCompleted,
+        total_typing_time: totalTypingTime,
+        ...data
+    });
+}
+
+// Enhanced typing test tracking
+class EnhancedTypingSpeedTest extends TypingSpeedTest {
+    constructor() {
+        super();
+        this.testStartTime = null;
+        this.sessionId = generateSessionId();
+    }
+
+    startTest() {
+        super.startTest();
+        this.testStartTime = Date.now();
+
+        trackTypingEvent('test_started', {
+            difficulty: this.difficultySelect.value,
+            session_id: this.sessionId
+        });
+
+        trackUserEngagement('test_started', {
+            difficulty: this.difficultySelect.value
+        });
+    }
+
+    endTest() {
+        super.endTest();
+
+        const testDuration = Date.now() - this.testStartTime;
+        totalTypingTime += testDuration;
+        typingTestsCompleted++;
+
+        trackTypingEvent('test_completed', {
+            difficulty: this.difficultySelect.value,
+            session_id: this.sessionId,
+            test_duration: testDuration,
+            tests_completed: typingTestsCompleted
+        });
+
+        trackUserEngagement('test_completed', {
+            difficulty: this.difficultySelect.value,
+            test_duration: testDuration
+        });
+    }
+
+    restartTest() {
+        trackTypingEvent('test_restarted', {
+            session_id: this.sessionId
+        });
+
+        super.restartTest();
+    }
+}
+
+// Generate unique session ID
+function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+// Privacy settings
+function showPrivacySettings() {
+    const consent = confirm(
+        'Analytics ve performans takibine izin veriyor musunuz?\n\n' +
+        'Bu veriler uygulamanın geliştirilmesine yardımcı olur.\n' +
+        'İstediğiniz zaman ayarları değiştirebilirsiniz.'
+    );
+
+    localStorage.setItem('analytics-consent', consent.toString());
+    return consent;
+}
+
+// Initialize theme system
+function initThemeSystem() {
+    // Check for saved theme preference or default to light mode
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+
+    // Add theme toggle button to header
+    addThemeToggleButton();
+
+    // Listen for system theme changes
+    if (window.matchMedia) {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        mediaQuery.addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        });
+    }
+}
+
+// Set theme
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+
+    // Update meta theme-color
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', theme === 'dark' ? '#1a1a2e' : '#6366f1');
+    }
+
+    // Track theme change
+    trackTypingEvent('theme_changed', { theme: theme });
+}
+
+// Add theme toggle button
+function addThemeToggleButton() {
+    const header = document.querySelector('.header');
+    const themeToggle = document.createElement('button');
+    themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+    themeToggle.className = 'theme-toggle';
+    themeToggle.title = 'Tema değiştir';
+    themeToggle.setAttribute('aria-label', 'Tema değiştir');
+
+    themeToggle.style.cssText = `
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 10px;
+        color: var(--text-primary);
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+    `;
+
+    themeToggle.onmouseover = () => {
+        themeToggle.style.background = 'rgba(255, 255, 255, 0.15)';
+        themeToggle.style.transform = 'scale(1.05)';
+    };
+
+    themeToggle.onmouseout = () => {
+        themeToggle.style.background = 'rgba(255, 255, 255, 0.1)';
+        themeToggle.style.transform = 'scale(1)';
+    };
+
+    themeToggle.onclick = toggleTheme;
+
+    // Insert after logo
+    const logo = header.querySelector('.logo');
+    header.insertBefore(themeToggle, logo.nextSibling);
+}
+
+// Toggle theme
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+
+    // Update button icon
+    const themeToggle = document.querySelector('.theme-toggle i');
+    themeToggle.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
 }
 
 // Add some additional styling for better text highlighting
