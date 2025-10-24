@@ -1,7 +1,7 @@
 {
   "name": "hizli-yazi-uygulamasi",
   "version": "1.0.0",
-  "description": "Modern ve hızlı Türkçe yazma hızı test uygulaması",
+  "description": "Modern ve hizli Turkce yazma hizi test uygulamasi",
   "main": "index.html",
   "scripts": {
     "start": "python -m http.server 8000",

@@ -104,13 +104,13 @@ hizli-yazi-uygulamasi/
 ├── .nojekyll                       # Disable Jekyll
 ├── .prettierrc                     # Prettier configuration
 ├── CNAME                           # Custom domain (optional)
-├── CONTRIBUTING.md                 # Contribution guidelines
+├── contributing.md                 # Contribution guidelines
 ├── LICENSE                         # MIT License
 ├── manifest.json                   # PWA manifest
 ├── package.json                    # Project configuration
 ├── README.md                       # This file
 ├── robots.txt                      # SEO robots file
-├── SECURITY.md                     # Security policy
+├── security.md                     # Security policy
 ├── service-worker.js               # Enhanced PWA service worker
 ├── sitemap.xml                     # SEO sitemap
 ├── index.html                      # Main application (SEO optimized)
@@ -221,7 +221,7 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 
 ## 🔒 **Güvenlik**
 
-- **Security Policy**: [SECURITY.md](SECURITY.md)
+- **Security Policy**: [security.md](security.md)
 - **Vulnerability Reporting**: Güvenlik açıkları için özel prosedür
 - **Dependency Scanning**: Otomatik güvenlik taramaları
 - **Content Security Policy**: XSS koruması
@@ -242,8 +242,8 @@ Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICE
 ⭐ **Star this repo if you find it useful!**
 
 [🌐 Live Demo](https://dead-zone.github.io/hizli-yazi-uygulamasi/) •
-[📖 Documentation](CONTRIBUTING.md) •
-[🔒 Security](SECURITY.md) •
+[📖 Documentation](contributing.md) •
+[🔒 Security](security.md) •
 [🐛 Issues](https://github.com/DEAD-ZONE/hizli-yazi-uygulamasi/issues) •
 [💬 Discussions](https://github.com/DEAD-ZONE/hizli-yazi-uygulamasi/discussions)
 
