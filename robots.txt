@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://dead-zone.github.io/hizli-yazi-uygulamasi/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1
+
+# Disallow common non-content paths
+Disallow: /node_modules/
+Disallow: /.git/
+Disallow: /assets/*.log
+Disallow: /*.json$
+Disallow: /*?*

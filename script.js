@@ -281,7 +281,153 @@ class TypingSpeedTest {
 // Initialize the application when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     new TypingSpeedTest();
+
+    // Register Service Worker for PWA support
+    registerServiceWorker();
+
+    // Check for app updates
+    checkForUpdates();
 });
+
+// Service Worker Registration
+function registerServiceWorker() {
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('[App] Service Worker registered successfully:', registration.scope);
+
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        if (newWorker) {
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdateNotification();
+                                }
+                            });
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.log('[App] Service Worker registration failed:', error);
+                });
+        });
+    }
+}
+
+// Check for app updates
+function checkForUpdates() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+        });
+    }
+}
+
+// Show update notification
+function showUpdateNotification() {
+    const notification = document.createElement('div');
+    notification.innerHTML = `
+        <div style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(45deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+        ">
+            <i class="fas fa-sync-alt" style="margin-right: 8px;"></i>
+            Yeni güncelleme mevcut! Tıklayarak yenileyin.
+        </div>
+    `;
+
+    notification.onclick = () => {
+        window.location.reload();
+    };
+
+    document.body.appendChild(notification);
+
+    // Auto-reload after 10 seconds
+    setTimeout(() => {
+        window.location.reload();
+    }, 10000);
+}
+
+// PWA Install Prompt
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    // Show install button
+    showInstallButton();
+});
+
+function showInstallButton() {
+    const installBtn = document.createElement('button');
+    installBtn.innerHTML = `
+        <i class="fas fa-download"></i>
+        Uygulamayı Yükle
+    `;
+    installBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: linear-gradient(45deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+        z-index: 9999;
+        transition: all 0.3s ease;
+    `;
+
+    installBtn.onmouseover = () => {
+        installBtn.style.transform = 'translateY(-2px)';
+        installBtn.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
+    };
+
+    installBtn.onmouseout = () => {
+        installBtn.style.transform = 'translateY(0)';
+        installBtn.style.boxShadow = '0 4px 16px rgba(16, 185, 129, 0.3)';
+    };
+
+    installBtn.onclick = () => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            }
+            deferredPrompt = null;
+            installBtn.remove();
+        });
+    };
+
+    document.body.appendChild(installBtn);
+}
+
+// Performance monitoring
+if ('performance' in window) {
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const perfData = performance.getEntriesByType('navigation')[0];
+            console.log('[Performance] Page load time:', perfData.loadEventEnd - perfData.loadEventStart, 'ms');
+            console.log('[Performance] DOM ready time:', perfData.domContentLoadedEventEnd - perfData.domContentLoadedEventStart, 'ms');
+        }, 0);
+    });
+}
 
 // Add some additional styling for better text highlighting
 const style = document.createElement('style');
@@ -290,7 +436,7 @@ style.textContent = `
         white-space: pre-wrap;
         word-wrap: break-word;
     }
-    
+
     .highlight-correct {
         color: #10b981;
         background: rgba(16, 185, 129, 0.2);

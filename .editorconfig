@@ -1,0 +1,49 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JavaScript files
+[*.js]
+quote_type = single
+
+# JSON files
+[*.json]
+indent_size = 2
+
+# Markdown files
+[*.md]
+trim_trailing_whitespace = false
+
+# HTML files
+[*.html]
+indent_size = 2
+
+# CSS files
+[*.css]
+indent_size = 2
+
+# YAML files
+[*.yml]
+indent_size = 2
+
+# Package.json
+[package.json]
+indent_size = 2
+
+# README
+[README.md]
+trim_trailing_whitespace = false
+
+# GitHub workflows
+[.github/workflows/*.yml]
+indent_size = 2
